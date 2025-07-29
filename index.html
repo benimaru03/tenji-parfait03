@@ -1,48 +1,149 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ja">
   <head>
-    <meta charset="UTF-8" />
-    <title>MindAR Image Display Sample</title>
-    <script src="https://cdn.jsdelivr.net/npm/aframe@1.4.2/dist/aframe.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+    <meta charset="utf-8" />
+    <title>WebAR展示</title>
     <style>
+      html,
       body {
         margin: 0;
+        padding: 0;
         overflow: hidden;
+        height: 100%;
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
-      #ar-container {
-        width: 100vw;
-        height: 100vh;
+      a-scene {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+      }
+      canvas {
+        width: 100% !important;
+        height: 100% !important;
       }
     </style>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+
+    <!-- A-Frame + mindAR -->
+    <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
   </head>
+
   <body>
-    <div id="ar-container">
-      <a-scene
-        mindar-image="imageTargetSrc: ./targets.mind; autoStart: true; uiScanning: yes;"
-        embedded
-        color-space="sRGB"
-        renderer="colorManagement: true, physicallyCorrectLights"
-        vr-mode-ui="enabled: false"
-        device-orientation-permission-ui="enabled: true"
+    <!-- 本番時はこれに書き換える→  mindar-image="imageTargetSrc: ./assets/mind/targets.mind;" -->
+    <!-- テストはこれに書き換える→  mindar-image="imageTargetSrc: ./assets/mind/targets.mind; filterMinCF:0.001; filterBeta: 0.001; autoStart: false; debug: true" -->
+    <a-scene
+      mindar-image="imageTargetSrc: ./assets/mind/targets_big.mind "
+      color-space="sRGB"
+      vr-mode-ui="enabled: false"
+      device-orientation-permission-ui="enabled: true"
+      renderer="precision: mediump; antialias: true"
+    >
+      <!-- カメラ -->
+      <a-camera
+        position="0 0 0"
+        look-controls="enabled: false"
+        wasd-controls-enabled="false"
+        cursor="fuse: false; rayOrigin: mouse"
+        raycaster="objects: .clickable"
+      ></a-camera>
+
+      <!-- ターゲットマーカーに反応.  <a-entity mindar-image-target="targetIndex: 0" id="marker"-->
+      <!-- 開発環境.  <a-entity id="marker" visible="true" -->
+      <a-entity
+        mindar-image-target="targetIndex: 0"
+        id="marker"
+        class="clickable"
       >
-        <a-assets>
-          <img id="my-image" src="./sample-image.png" />
-        </a-assets>
+        <!-- 背景 -->
+        <a-image
+          src="#mainbg"
+          hight="1.2"
+          width="0.9"
+          position="0 0 -2"
+          rotation="0 0 0"
+          scale="1.5 1.5 1"
+        ></a-image>
 
-        <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+        <!-- 中景 -->
+        <a-image
+          src="#maincv"
+          hight="1.2"
+          width="0.9"
+          position="0 0 -1"
+          rotation="0 0 0"
+          scale="1 1 1"
+        ></a-image>
 
-        <a-entity mindar-image-target="targetIndex: 0">
-          <a-plane
-            src="#my-image"
-            position="0 0 0"
-            width="1"
-            height="1"
-            rotation="0 0 0"
-          >
-          </a-plane>
-        </a-entity>
-      </a-scene>
-    </div>
+        <!-- 前景 PNG 複数 -->
+
+        <a-image
+          src="#fg3"
+          position="0 0 -0.8"
+          rotation="0 0 15"
+          scale="1 1 1"
+        ></a-image>
+      </a-entity>
+
+      <!-- アセット読み込み -->
+      <a-assets>
+        <img id="mainbg" src="./assets/image/main_bg.jpg" />
+        <img id="maincv" src="./assets/image/main_cv.png" />
+
+        <img id="fg1" src="./assets/image/Cream1.png" />
+        <img id="fg2" src="./assets/image/Cream2.png" />
+        <img id="fg3" src="./assets/image/01frame2.png" />
+
+        <!-- スタンプ画像（必要に応じて追加） -->
+        <img id="stamp1" src="./assets/stamp/stamp1.png" />
+        <img id="stamp2" src="./assets/stamp/stamp2.png" />
+        <img id="stamp3" src="./assets/stamp/stamp3.png" />
+
+        <!-- 3Dモデルを追加 -->
+        <a-asset-item
+          id="my-model"
+          src="./assets/model/Text3D.glb"
+        ></a-asset-item>
+      </a-assets>
+    </a-scene>
+
+    <script>
+      const stampIds = ["#stamp1", "#stamp2", "#stamp3"];
+      const marker = document.querySelector("#marker");
+
+      // タップイベントでランダムスタンプ追加
+      marker.addEventListener("click", () => {
+        const stamp = document.createElement("a-image");
+        const randomId = stampIds[Math.floor(Math.random() * stampIds.length)];
+        stamp.setAttribute("src", randomId);
+
+        // ランダム位置（範囲はお好みで調整）
+        const x = (Math.random() - 0.5) * 1.2;
+        const y = (Math.random() - 0.5) * 1.2;
+        stamp.setAttribute("position", `${x} ${y} 0.2`);
+        stamp.setAttribute("scale", "0 0 0");
+
+        // ポンっと登場アニメーション
+        stamp.setAttribute("animation__scale", {
+          property: "scale",
+          to: "0.4 0.4 0.4",
+          dur: 400,
+          easing: "easeOutElastic",
+        });
+
+        marker.appendChild(stamp);
+
+        // 一定時間後に削除（例：5秒）
+        setTimeout(() => stamp.remove(), 5000);
+      });
+    </script>
   </body>
 </html>
